@@ -1,4 +1,4 @@
-#include "gy85.hpp"
+#include "gy85/gy85.hpp"
 #include <stdlib.h>
 #include <math.h>
 #include "pico/stdlib.h"

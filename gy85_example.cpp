@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include "pico/stdlib.h"
 #include "hardware/i2c.h"
-#include "gy85.hpp"
+#include "gy85/gy85.hpp"
 
 // I2C defines
 #define I2C_PORT i2c0

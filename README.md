@@ -45,7 +45,7 @@ target_link_libraries(gy85_example
 
 pico_add_extra_outputs(gy85_example)
 ```
-4. Include the library in your code: `#include "gy85.hpp"`
+4. Include the library in your code: `#include "gy85/gy85.hpp"`
 
 I also wrote a [simple example](https://github.com/mattsays/gy85/blob/main/gy85_example.cpp) on how to use this library
 
