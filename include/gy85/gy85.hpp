@@ -3,9 +3,9 @@
 
 typedef struct
 {
-    float x;
-    float y;
-    float z;
+    double x;
+    double y;
+    double z;
 } vec3f_t;
 
 // ADXL345 Misc
@@ -124,9 +124,7 @@ typedef enum
 
 // QMC5883L Misc
 #define QMC5883L_ADDR (0x0D)
-#define QMC5883L_SCALE_FACTOR (3000)
 #define QMC5883L_ID (0xFF)
-#define GAUSS_TO_TESLA (0.0001)
 
 // QMC5883L Registers
 #define QMC5883L_REG_ID (0x0D)
@@ -176,8 +174,6 @@ private:
     uint8_t qmc5883l_addr;
 
     float adxl345_scale_factor;
-
-    uint16_t qmc5883l_scale_factor;
     
     vec3f_t accel, accel_offset;
     vec3f_t gyro, gyro_offset;

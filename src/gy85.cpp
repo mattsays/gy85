@@ -4,6 +4,8 @@
 #include "pico/stdlib.h"
 #include "hardware/i2c.h"
 
+#define DEG_TO_RAD (M_PI / 180.0)
+
 int8_t write_register(uint8_t port, uint8_t addr, uint8_t reg, uint8_t value)
 {
     uint8_t buff[] = {reg, value};
@@ -38,9 +40,7 @@ gy85::gy85(uint8_t i2c_port, uint8_t adxl345_addr, uint8_t itg3205_addr, uint8_t
     this->qmc5883l_addr = qmc5883l_addr;
 
     this->adxl345_scale_factor = ADXL345_SCALE_FACTOR;
-
-    this->qmc5883l_scale_factor = QMC5883L_SCALE_FACTOR;
-
+    
     this->accel.x = 0;
     this->accel.y = 0;
     this->accel.z = 0;
@@ -75,7 +75,7 @@ int gy85::init()
     {
         return PICO_ERROR_GENERIC;
     }
-
+    
     if (init_qmc5883l() != PICO_OK)
     {
         return PICO_ERROR_GENERIC;
@@ -531,9 +531,9 @@ int gy85::read_itg3205(vec3f_t *gyro)
     int16_t y = uint16_t(buffer[2]) << 8 | uint16_t(buffer[3]);
     int16_t z = uint16_t(buffer[4]) << 8 | uint16_t(buffer[5]);
 
-    gyro->x = x / ITG3205_DIGIT_TO_DEG;
-    gyro->y = y / ITG3205_DIGIT_TO_DEG;
-    gyro->z = z / ITG3205_DIGIT_TO_DEG;
+    gyro->x = x * (DEG_TO_RAD / ITG3205_DIGIT_TO_DEG);
+    gyro->y = y * (DEG_TO_RAD / ITG3205_DIGIT_TO_DEG);
+    gyro->z = z * (DEG_TO_RAD / ITG3205_DIGIT_TO_DEG);
 
     gyro->x -= this->gyro_offset.x;
     gyro->y -= this->gyro_offset.y;
@@ -548,35 +548,28 @@ int gy85::read_itg3205(vec3f_t *gyro)
 
 int gy85::init_qmc5883l()
 {
-
-    // Set mode
-    if (set_qmc5883l_mode(qmc5883l_mode_t::CONTINUOUS) != PICO_OK)
+    // Set reset
+    if (write_register(this->i2c_port, this->qmc5883l_addr, QMC5883L_REG_CONFIG_B, 0x80) != PICO_OK)
     {
         return PICO_ERROR_GENERIC;
     }
-
-    // Set scale
-    if (set_qmc5883l_scale(qmc5883l_scale_t::SCALE_2_GA) != PICO_OK)
-    {
-        return PICO_ERROR_GENERIC;
-    }
-
-    // Set output rate
-    if (set_qmc5883l_output_rate(qmc5883l_output_rate_t::OUTPUT_100_HZ) != PICO_OK)
-    {
-        return PICO_ERROR_GENERIC;
-    }
-
-    // Set over sample rate
-    if (set_qmc5883l_over_sample(qmc5883l_over_sample_t::OVER_SAMPLE_256) != PICO_OK)
-    {
-        return PICO_ERROR_GENERIC;
-    }
-
+    
     // Set period
     if (write_register(this->i2c_port, this->qmc5883l_addr, QMC5883L_REG_PERIOD, 0x01) != PICO_OK)
     {
         return PICO_ERROR_GENERIC;
+    }
+
+    // Set roll over pointer
+    if (write_register(this->i2c_port, this->qmc5883l_addr, QMC5883L_REG_CONFIG_B, 0x40) != PICO_OK)
+    {
+        return PICO_ERROR_GENERIC;
+    }
+
+    // Set Continuous, 100 HZ, 2 GA, 512 OSR
+    if (this->set_qmc5883l_ctrl(0x19) != PICO_OK)
+    {
+         return PICO_ERROR_GENERIC;
     }
 
     return PICO_OK;
@@ -590,13 +583,13 @@ int gy85::read_qmc5883l(vec3f_t *mag)
         return PICO_ERROR_GENERIC;
     }
 
-    int16_t x = uint16_t(buffer[1]) << 8 | uint16_t(buffer[0]);
-    int16_t y = uint16_t(buffer[3]) << 8 | uint16_t(buffer[2]);
-    int16_t z = uint16_t(buffer[5]) << 8 | uint16_t(buffer[4]);
+    int16_t x = (buffer[1]) << 8 | (buffer[0]);
+    int16_t y = (buffer[3]) << 8 | (buffer[2]);
+    int16_t z = (buffer[5]) << 8 | (buffer[4]);
 
-    mag->x = x * (GAUSS_TO_TESLA / this->qmc5883l_scale_factor);
-    mag->y = y * (GAUSS_TO_TESLA / this->qmc5883l_scale_factor);
-    mag->z = z * (GAUSS_TO_TESLA / this->qmc5883l_scale_factor);
+    mag->x = x;
+    mag->y = y;
+    mag->z = z;
 
     return PICO_OK;
 }
@@ -658,8 +651,6 @@ int gy85::set_qmc5883l_scale(qmc5883l_scale_t scale)
     {
         return PICO_ERROR_GENERIC;
     }
-
-    this->qmc5883l_scale_factor = scale == qmc5883l_scale_t::SCALE_2_GA ? QMC5883L_SCALE_FACTOR : 4*QMC5883L_SCALE_FACTOR;
 
     return PICO_OK;
 }
